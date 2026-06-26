@@ -48,3 +48,39 @@ export class TokenReuseDetectedException extends DomainException {
     );
   }
 }
+
+export class VideoNotFoundException extends DomainException {
+  constructor() {
+    super('VIDEO_NOT_FOUND', 404, 'Video was not found');
+  }
+}
+
+export class VideoForbiddenException extends DomainException {
+  constructor() {
+    super('VIDEO_FORBIDDEN', 403, 'You cannot access this video');
+  }
+}
+
+export class VideoUploadNotActiveException extends DomainException {
+  constructor() {
+    super('VIDEO_UPLOAD_NOT_ACTIVE', 409, 'Video upload is not active');
+  }
+}
+
+export class VideoNotReadyException extends DomainException {
+  constructor() {
+    super('VIDEO_NOT_READY', 404, 'Video is not ready');
+  }
+}
+
+export class InvalidRangeException extends DomainException {
+  constructor() {
+    super('INVALID_RANGE', 416, 'Requested range is not satisfiable');
+  }
+}
+
+export class VideoStorageException extends DomainException {
+  constructor(message = 'Video storage operation failed') {
+    super('VIDEO_STORAGE_ERROR', 502, message);
+  }
+}

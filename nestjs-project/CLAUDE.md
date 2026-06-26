@@ -13,6 +13,8 @@ docker compose ps   # all services must show status "running"
 Then verify each infrastructure service is actually ready to accept connections — not just running:
 
 - **PostgreSQL:** `docker compose exec db pg_isready -U streamtube` — expect `accepting connections`
+- **Redis:** `docker compose exec redis redis-cli ping` — expect `PONG`
+- **MinIO:** `docker compose exec minio mc ready local` — expect ready status
 
 Only start the NestJS dev server (`npm run start:dev`) when the user **explicitly** asks to run the application — never as part of "start the environment".
 
@@ -34,6 +36,9 @@ docker compose exec nestjs-api npm run start:dev
 Services:
 - `nestjs-api` — NestJS API, port `3000`
 - `db` — PostgreSQL 17, port `5432`, database `streamtube`, user/password `streamtube`
+- `redis` — Redis queue backend for BullMQ, port `6379`
+- `minio` — S3-compatible object storage, ports `9000` and `9001`
+- `video-worker` — background worker that consumes video processing jobs and runs FFmpeg/ffprobe
 
 All verification and teardown commands run on the **host machine**:
 
@@ -43,6 +48,8 @@ curl http://localhost:3000
 
 # Verify PostgreSQL is ready (runs inside the db container)
 docker compose exec db pg_isready -U streamtube
+docker compose exec redis redis-cli ping
+docker compose exec minio mc ready local
 
 # Check container logs
 docker compose logs nestjs-api
@@ -148,6 +155,15 @@ NestJS with standard module structure. Source lives in `src/`, compiled output i
 
 - Each domain feature gets its own module (e.g., `UsersModule`, `VideosModule`) registered in `AppModule`
 - Controllers handle HTTP routing; Services hold business logic; both are scoped to their module
+
+### Videos / Phase 03
+
+- `src/videos/` owns the video entity, upload orchestration, status lifecycle, public metadata, streaming, and download endpoints.
+- `src/storage/` owns S3-compatible operations: multipart upload, presigned part URLs, object reads, object metadata, and thumbnail upload.
+- `src/video-queue/` owns BullMQ job publication for `video.processing.requested`.
+- `src/worker/` owns the separate worker process. It consumes BullMQ jobs, reads uploaded videos from storage, runs `ffprobe`/`ffmpeg`, uploads thumbnails, and updates video rows.
+- Large uploads must use S3 multipart presigned URLs. Do not proxy full video files through the NestJS API.
+- Internal service hosts must use Compose service names: `db`, `redis`, `minio`.
 
 ## Code Conventions
 

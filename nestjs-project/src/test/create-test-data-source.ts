@@ -6,6 +6,8 @@ interface TestDataSourceOptions {
 }
 
 export function createTestDataSource(
+  // TypeORM's DataSourceOptions still accepts Function constructors here.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   entities: (Function | string | EntitySchema<any>)[],
   options: TestDataSourceOptions = {},
 ): DataSource {
@@ -24,8 +26,23 @@ export function createTestDataSource(
 }
 
 export async function cleanAllTables(dataSource: DataSource): Promise<void> {
-  await dataSource.query('DELETE FROM "refresh_tokens"');
-  await dataSource.query('DELETE FROM "verification_tokens"');
-  await dataSource.query('DELETE FROM "channels"');
-  await dataSource.query('DELETE FROM "users"');
+  await deleteIfExists(dataSource, 'videos');
+  await deleteIfExists(dataSource, 'refresh_tokens');
+  await deleteIfExists(dataSource, 'verification_tokens');
+  await deleteIfExists(dataSource, 'channels');
+  await deleteIfExists(dataSource, 'users');
+}
+
+async function deleteIfExists(
+  dataSource: DataSource,
+  tableName: string,
+): Promise<void> {
+  await dataSource.query(`
+    DO $$
+    BEGIN
+      IF to_regclass('public.${tableName}') IS NOT NULL THEN
+        EXECUTE 'DELETE FROM "${tableName}"';
+      END IF;
+    END $$;
+  `);
 }

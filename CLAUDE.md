@@ -23,8 +23,20 @@ See `docs/diagrams/software-arch.mermaid` for the full diagram. Key containers:
 - **Video Worker** (FFmpeg) → consumes jobs from queue, processes videos, updates DB and storage
 - **Database** (PostgreSQL) → users, channels, videos, comments, likes
 - **Object Storage** (S3/MinIO) → video files and thumbnails
-- **Message Queue** (TBD) → video processing job queue
+- **Message Queue** (BullMQ + Redis) → video processing job queue
 - **Email Service** (SMTP) → account confirmation and password recovery
+
+## Phase 03 Videos
+
+The backend now includes the Phase 03 video upload and processing architecture:
+
+- `nestjs-project/src/videos/` — `VideosModule`, upload orchestration endpoints, public metadata, streaming, download, video entity, status lifecycle, slug/range utilities, and tests.
+- `nestjs-project/src/storage/` — S3-compatible storage adapter using AWS SDK v3 against MinIO locally and S3-compatible endpoints in production.
+- `nestjs-project/src/video-queue/` — BullMQ producer for `video.processing.requested` jobs.
+- `nestjs-project/src/worker/` — separate video worker bootstrap consuming BullMQ jobs and using FFmpeg/ffprobe for metadata and thumbnail generation.
+- `nestjs-project/compose.yaml` — adds Redis, MinIO, bucket creation, and `video-worker`.
+
+Upload of large files is orchestrated through S3 multipart presigned URLs. The API pre-registers the video and controls ownership/status; clients upload parts directly to object storage.
 
 ## Docker Networking
 
